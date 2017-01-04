@@ -5,6 +5,7 @@ import signal
 import sys
 import logging
 import flask
+import editdistance
 from flask import Flask
 
 
@@ -20,6 +21,18 @@ index_name = 'kb-label-lookup'
 type_name = 'label-map'
 
 
+def flask_result_to_article_schema(flask_result, search_query):
+    flask_result = flask_result['_source']
+    return {
+        'matchedLabel': flask_result['label'],
+        'canonLabel': flask_result['canonical_label'],
+        'prob': '0', #todo change this after understanding probabilty's impact in pipeline
+        'dist': editdistance.eval(search_query.lower(),flask_result['label'].lower()),
+        'name': flask_result['label'], #todo investigate how yodaqa uses name
+    }
+
+
+
 @app.route('/search/<name>')
 def search(name):
     logger.info('searching ' + name.encode('utf-8'))
@@ -33,8 +46,7 @@ def search(name):
             }
         }
     })
-    #todo make this json conform to 'article' json spec
-    return flask.jsonify(search_results['hits']['hits'])
+    return flask.jsonify({'results': [flask_result_to_article_schema(result,name) for result in search_results['hits']['hits']]})
 
 
 if __name__ == '__main__':
