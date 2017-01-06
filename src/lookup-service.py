@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+
 import elasticsearch, elasticsearch.helpers
 import signal
 import sys
@@ -32,8 +33,14 @@ def flask_result_to_article_schema(elastic_result, search_query):
     }
 
 
-@app.route('/search/<name>')
-def search(name):
+# Due to how flask handles slashes
+# https://github.com/pallets/flask/issues/900
+# https://github.com/flask-restful/flask-restful/issues/393
+# we ask for the search term to be a querystring parameter 'name' instead of directly part of the route
+
+@app.route('/search')
+def search():
+    name = flask.request.args.get('name')
     logger.info('searching ' + name.encode('utf-8'))
     search_results = es_client.search(index=[index_name], doc_type=[type_name], track_scores=True, body={
         "query": {
